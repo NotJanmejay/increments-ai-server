@@ -4,10 +4,12 @@ from django.contrib.auth.hashers import make_password, check_password
 import random
 import string
 
+
 def generate_random_password(length=8):
     """Generate a random password."""
     characters = string.ascii_letters + string.digits + string.punctuation
-    return ''.join(random.choice(characters) for _ in range(length))
+    return "".join(random.choice(characters) for _ in range(length))
+
 
 # Student Model
 class Student(models.Model):
@@ -23,33 +25,31 @@ class Student(models.Model):
 
     def save(self, *args, **kwargs):
         # Hash the password before saving it if it is not already hashed
-        if self.password and not self.password.startswith('pbkdf2_sha256$'):
+        if self.password and not self.password.startswith("pbkdf2_sha256$"):
             self.password = make_password(self.password)
         super(Student, self).save(*args, **kwargs)
 
     def check_password(self, raw_password):
         return check_password(raw_password, self.password)
-    
 
 
-    
 # Teacher Persona Model
 class Teacher(models.Model):
-    name = models.CharField(max_length=100, primary_key=True)  # Name as primary key
+    id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=100, unique=True)  # Name as primary key
     tagline = models.CharField(max_length=200)
     description = models.TextField()
     greetings = models.CharField(max_length=255)
     prompt = models.CharField(max_length=2000)  # Storing JSON data
     subject = models.CharField(max_length=100)  # New field for subject
 
-
     def __str__(self):
         return self.name
-    
+
 
 class PDFEmbedding(models.Model):
-    file = models.FileField(upload_to='pdfs/')  # Field for storing the PDF file
+    file = models.FileField(upload_to="pdfs/")  # Field for storing the PDF file
     # You might want to store metadata about embeddings or other relevant information
 
     def __str__(self):
-        return f"{self.file.name} uploaded."  
+        return f"{self.file.name} uploaded."
