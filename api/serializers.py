@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Student, Teacher
+from .models import Student, Teacher, PDFEmbedding
 from django.contrib.auth.hashers import make_password
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -25,3 +25,10 @@ class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
         fields = ["name", "tagline", "description", "greetings", "prompt"]  # Include the new field
+
+class PDFEmbeddingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PDFEmbedding
+        fields = ['file']  # You can include additional fields if needed
+
+
