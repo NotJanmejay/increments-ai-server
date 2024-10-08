@@ -45,3 +45,11 @@ class Teacher(models.Model):
 
     def __str__(self):
         return self.name
+    
+
+class PDFEmbedding(models.Model):
+    file = models.FileField(upload_to='pdfs/')  # Field for storing the PDF file
+    # You might want to store metadata about embeddings or other relevant information
+
+    def __str__(self):
+        return f"{self.file.name} uploaded."  
