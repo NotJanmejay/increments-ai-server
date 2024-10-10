@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.hashers import make_password, check_password
+from django.contrib.auth.models import User
 import random
 import string
 
@@ -48,8 +49,7 @@ class Teacher(models.Model):
 
 
 class PDFEmbedding(models.Model):
-    file = models.FileField(upload_to="pdfs/")  # Field for storing the PDF file
-    # You might want to store metadata about embeddings or other relevant information
+    file_name = models.CharField(max_length=255)  # Store only the file name
 
     def __str__(self):
-        return f"{self.file.name} uploaded."
+        return self.file_name

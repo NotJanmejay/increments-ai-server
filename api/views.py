@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, parser_classes
-from .models import Student, Teacher
+from .models import Student, Teacher, PDFEmbedding
 from .serializers import (
     StudentSerializer,
     TeacherSerializer,
@@ -168,6 +168,43 @@ def get_teacher(request, name):
             {"error": "Teacher not found."}, status=status.HTTP_404_NOT_FOUND
         )
 
+# Edit student details based on email
+@api_view(["PUT"])
+def edit_student(request, email):
+    try:
+        student = Student.objects.get(email=email)
+    except Student.DoesNotExist:
+        return Response({"error": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = StudentSerializer(student, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Student details updated successfully."}, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Delete student based on email
+@api_view(["DELETE"])
+def delete_student(request, email):
+    try:
+        student = Student.objects.get(email=email)
+        student.delete()
+        return Response({"message": "Student deleted successfully."}, status=status.HTTP_200_OK)
+    except Student.DoesNotExist:
+        return Response({"error": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+
+# Delete teacher based on name
+@api_view(["DELETE"])
+def delete_teacher(request, name, subject):
+    try:
+        teacher = Teacher.objects.get(name=name, subject = subject)
+        teacher.delete()
+        return Response({"message": "Teacher deleted successfully."}, status=status.HTTP_200_OK)
+    except Teacher.DoesNotExist:
+        return Response({"error": "Teacher not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+# Define your status keys
+PROCESSING_KEY_PREFIX = "pdf_status_"
 
 # PDF Embeddings
 @api_view(["POST"])
@@ -183,6 +220,12 @@ def upload_pdf(request):
 
     # Save the uploaded file temporarily
     file_path = default_storage.save(pdf_file.name, pdf_file)
+
+    # Extract only the file name from the uploaded file
+    file_name = os.path.basename(pdf_file.name)
+
+    pdf_embedding = PDFEmbedding(file_name=file_name)
+    pdf_embedding.save()
 
     # Store the initial status in the cache
     cache.set(f"pdf_status_{pdf_file.name}", {
@@ -232,7 +275,7 @@ def process_pdf_embedding(file_path, file_name):
         # Update the status to 'completed'
         cache.set(f"pdf_status_{file_name}", {
             "status": "completed",
-            "message": "PDF uploaded and embeddings stored successfully!"
+            "message": f"{file_name} uploaded and embeddings stored successfully!"
         }, timeout=None)
 
     except Exception as e:
@@ -242,10 +285,28 @@ def process_pdf_embedding(file_path, file_name):
             "message": str(e)
         }, timeout=None)
 
-    # Optionally, delete the file after processing if you don't need to keep it
-    os.remove(file_path)
+    finally:
+        # Safely delete the file after processing
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
+@api_view(["GET"])
+def check_embedding_status(request, file_name):
+    """Check the status of the PDF embedding process."""
+    status_info = cache.get(f"{PROCESSING_KEY_PREFIX}{file_name}")
 
+    if status_info:
+        return Response(status_info, status=status.HTTP_200_OK)
+    else:
+        return Response({"error": f"No uploading process started for {file_name}"}, status=status.HTTP_404_NOT_FOUND)
+    
+
+@api_view(["GET"])
+def list_uploaded_pdfs(request):
+    """List all uploaded PDF files."""
+    pdfs = PDFEmbedding.objects.all()
+    serializer = PDFEmbeddingSerializer(pdfs, many=True)
+    return Response(serializer.data)
 
 
 def create_message_history(messages):
